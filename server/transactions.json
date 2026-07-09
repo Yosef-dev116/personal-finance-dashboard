@@ -1,0 +1,30 @@
+[
+  {
+    "id": "b4066ed6-3224-4653-9124-13374042366c",
+    "amount": 20,
+    "category": "coffee",
+    "date": "2026-07-09",
+    "createdAt": "2026-07-09T14:41:10.977Z"
+  },
+  {
+    "id": "seed-1",
+    "amount": 42.5,
+    "category": "Groceries",
+    "date": "2026-04-02",
+    "createdAt": "2026-04-02T12:00:00.000Z"
+  },
+  {
+    "id": "seed-2",
+    "amount": 18,
+    "category": "Transport",
+    "date": "2026-04-03",
+    "createdAt": "2026-04-03T12:00:00.000Z"
+  },
+  {
+    "id": "seed-3",
+    "amount": 65,
+    "category": "Dining",
+    "date": "2026-04-05",
+    "createdAt": "2026-04-05T12:00:00.000Z"
+  }
+]

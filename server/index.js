@@ -1,4 +1,7 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
@@ -6,35 +9,61 @@ import OpenAI from "openai";
 
 dotenv.config();
 
-const app = express();
-const port = process.env.PORT || 4000;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TRANSACTIONS_PATH = path.join(__dirname, "transactions.json");
 
-app.use(cors());
-app.use(express.json());
-
-let transactions = [
+const DEFAULT_TRANSACTIONS = [
   {
     id: "seed-1",
     amount: 42.5,
     category: "Groceries",
     date: "2026-04-02",
-    createdAt: new Date().toISOString()
+    createdAt: "2026-04-02T12:00:00.000Z"
   },
   {
     id: "seed-2",
     amount: 18,
     category: "Transport",
     date: "2026-04-03",
-    createdAt: new Date().toISOString()
+    createdAt: "2026-04-03T12:00:00.000Z"
   },
   {
     id: "seed-3",
     amount: 65,
     category: "Dining",
     date: "2026-04-05",
-    createdAt: new Date().toISOString()
+    createdAt: "2026-04-05T12:00:00.000Z"
   }
 ];
+
+function loadTransactionsFromFile() {
+  try {
+    if (!fs.existsSync(TRANSACTIONS_PATH)) {
+      return DEFAULT_TRANSACTIONS;
+    }
+    const raw = fs.readFileSync(TRANSACTIONS_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return DEFAULT_TRANSACTIONS;
+    }
+    return parsed;
+  } catch (err) {
+    console.error("Failed to load transactions.json:", err.message);
+    return DEFAULT_TRANSACTIONS;
+  }
+}
+
+function saveTransactionsToFile() {
+  fs.writeFileSync(TRANSACTIONS_PATH, JSON.stringify(transactions, null, 2), "utf8");
+}
+
+const app = express();
+const port = process.env.PORT || 4000;
+
+app.use(cors());
+app.use(express.json());
+
+let transactions = loadTransactionsFromFile();
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -72,6 +101,7 @@ app.post("/transactions", (req, res) => {
   };
 
   transactions = [transaction, ...transactions];
+  saveTransactionsToFile();
   res.status(201).json(transaction);
 });
 
