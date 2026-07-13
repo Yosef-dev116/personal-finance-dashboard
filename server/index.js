@@ -105,6 +105,18 @@ app.post("/transactions", (req, res) => {
   res.status(201).json(transaction);
 });
 
+app.delete("/transactions/:id", (req, res) => {
+  const index = transactions.findIndex((transaction) => transaction.id === req.params.id);
+
+  if (index === -1) {
+    return res.status(404).json({ error: "Transaction not found." });
+  }
+
+  transactions = transactions.filter((transaction) => transaction.id !== req.params.id);
+  saveTransactionsToFile();
+  res.json({ success: true });
+});
+
 app.post("/analyze", async (req, res) => {
   const submittedTransactions = req.body.transactions;
 

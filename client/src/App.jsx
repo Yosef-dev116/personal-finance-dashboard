@@ -23,6 +23,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState("");
   const [advice, setAdvice] = useState("");
 
@@ -80,6 +81,29 @@ function App() {
       setError(submitError.message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDelete(id) {
+    try {
+      setDeletingId(id);
+      setError("");
+
+      const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
+        method: "DELETE"
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete transaction.");
+      }
+
+      setTransactions((current) => current.filter((transaction) => transaction.id !== id));
+    } catch (deleteError) {
+      setError(deleteError.message);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -265,7 +289,18 @@ function App() {
                       <strong>{transaction.category}</strong>
                       <p>{new Date(transaction.date).toLocaleDateString()}</p>
                     </div>
-                    <span>{formatCurrency(transaction.amount)}</span>
+                    <div className="transaction-actions">
+                      <span>{formatCurrency(transaction.amount)}</span>
+                      <button
+                        className="delete-button"
+                        type="button"
+                        onClick={() => handleDelete(transaction.id)}
+                        disabled={deletingId === transaction.id}
+                        aria-label={`Delete ${transaction.category} transaction`}
+                      >
+                        {deletingId === transaction.id ? "..." : "Delete"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
