@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from "recharts";
 
 const API_BASE_URL = "http://localhost:4000";
 const COLORS = ["#0f766e", "#ea580c", "#0284c7", "#7c3aed", "#65a30d", "#dc2626"];
@@ -51,6 +62,86 @@ function formatCurrency(value) {
   }).format(value);
 }
 
+function getMonthKey(dateString) {
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+    return dateString.slice(0, 7);
+  }
+
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function formatMonthLabel(monthKey) {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric"
+  });
+}
+
+function formatShortMonthLabel(monthKey) {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString(undefined, {
+    month: "short",
+    year: "2-digit"
+  });
+}
+
+function buildMonthlyReports(transactions) {
+  const groups = {};
+
+  for (const transaction of transactions) {
+    const key = getMonthKey(transaction.date);
+
+    if (!groups[key]) {
+      groups[key] = {
+        key,
+        label: formatMonthLabel(key),
+        shortLabel: formatShortMonthLabel(key),
+        transactions: [],
+        total: 0
+      };
+    }
+
+    groups[key].transactions.push(transaction);
+    groups[key].total += Number(transaction.amount);
+  }
+
+  return Object.keys(groups)
+    .sort((a, b) => b.localeCompare(a))
+    .map((key) => {
+      const group = groups[key];
+      const largestExpense = group.transactions.reduce((largest, transaction) =>
+        Number(transaction.amount) > Number(largest.amount) ? transaction : largest
+      );
+
+      const categoryTotals = {};
+      for (const transaction of group.transactions) {
+        const category = transaction.category || "Other";
+        categoryTotals[category] = (categoryTotals[category] || 0) + Number(transaction.amount);
+      }
+
+      const [highestCategoryName, highestCategoryAmount] = Object.entries(categoryTotals).sort(
+        (a, b) => b[1] - a[1]
+      )[0];
+
+      return {
+        key: group.key,
+        label: group.label,
+        shortLabel: group.shortLabel,
+        total: group.total,
+        count: group.transactions.length,
+        largestExpense,
+        highestCategory: {
+          name: highestCategoryName,
+          amount: highestCategoryAmount
+        }
+      };
+    });
+}
+
 function App() {
   const [transactions, setTransactions] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -65,6 +156,7 @@ function App() {
   const [advice, setAdvice] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+  const [selectedMonthKey, setSelectedMonthKey] = useState("");
 
   useEffect(() => {
     fetchTransactions();
@@ -256,6 +348,19 @@ function App() {
     : transactions;
   const visibleTransactions = sortTransactions(filteredTransactions, sortBy);
 
+  const monthlyReports = buildMonthlyReports(transactions);
+  const effectiveMonthKey = monthlyReports.some((report) => report.key === selectedMonthKey)
+    ? selectedMonthKey
+    : monthlyReports[0]?.key || "";
+  const selectedMonthReport =
+    monthlyReports.find((report) => report.key === effectiveMonthKey) || null;
+  const monthlyTrendData = [...monthlyReports]
+    .reverse()
+    .map((report) => ({
+      month: report.shortLabel,
+      total: Number(report.total.toFixed(2))
+    }));
+
   return (
     <div className="app-shell">
       <div className="background-orb background-orb-left" />
@@ -374,6 +479,113 @@ function App() {
               ))}
             </div>
           </article>
+        </section>
+
+        <section className="panel monthly-reports-panel">
+          <div className="panel-header monthly-reports-header">
+            <div>
+              <h2>Monthly reports</h2>
+              <p>Spending summaries grouped by month and year.</p>
+            </div>
+
+            {monthlyReports.length ? (
+              <label className="month-selector" htmlFor="month-report-select">
+                Month
+                <select
+                  id="month-report-select"
+                  value={effectiveMonthKey}
+                  onChange={(event) => setSelectedMonthKey(event.target.value)}
+                >
+                  {monthlyReports.map((report) => (
+                    <option key={report.key} value={report.key}>
+                      {report.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+
+          {selectedMonthReport ? (
+            <>
+              <div className="monthly-report-card">
+                <div className="monthly-report-stats">
+                  <div className="stat-card">
+                    <span>Total spending</span>
+                    <strong>{formatCurrency(selectedMonthReport.total)}</strong>
+                  </div>
+                  <div className="stat-card">
+                    <span>Transactions</span>
+                    <strong>{selectedMonthReport.count}</strong>
+                  </div>
+                  <div className="stat-card">
+                    <span>Largest expense</span>
+                    <strong>{formatCurrency(selectedMonthReport.largestExpense.amount)}</strong>
+                    <p>{selectedMonthReport.largestExpense.category}</p>
+                  </div>
+                  <div className="stat-card">
+                    <span>Highest category</span>
+                    <strong>{selectedMonthReport.highestCategory.name}</strong>
+                    <p>{formatCurrency(selectedMonthReport.highestCategory.amount)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="monthly-trend">
+                <div className="panel-header">
+                  <h3>Monthly spending trend</h3>
+                  <p>Compare total spend across months with transactions.</p>
+                </div>
+
+                <div className="chart-wrapper trend-chart-wrapper">
+                  <ResponsiveContainer width="100%" height={260}>
+                    <AreaChart data={monthlyTrendData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="monthlySpendGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.55} />
+                          <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.05} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="rgba(148, 163, 184, 0.18)" vertical={false} />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(value) => `$${value}`}
+                        width={56}
+                      />
+                      <Tooltip
+                        formatter={(value) => [formatCurrency(value), "Total spend"]}
+                        contentStyle={{
+                          background: "rgba(15, 23, 42, 0.95)",
+                          border: "1px solid rgba(148, 163, 184, 0.25)",
+                          borderRadius: "12px",
+                          color: "#f8fafc"
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="total"
+                        stroke="#38bdf8"
+                        strokeWidth={2.5}
+                        fill="url(#monthlySpendGradient)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="empty-state">
+              Add transactions to unlock monthly spending reports.
+            </div>
+          )}
         </section>
 
         <section className="grid-layout lower-grid">

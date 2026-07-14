@@ -1,5 +1,12 @@
 [
   {
+    "id": "6043d430-f9ca-426d-96cb-a0fa1cb2c756",
+    "amount": 55,
+    "category": "birthday",
+    "date": "2026-07-14",
+    "createdAt": "2026-07-14T15:31:56.411Z"
+  },
+  {
     "id": "b4066ed6-3224-4653-9124-13374042366c",
     "amount": 29.95,
     "category": "milk",
@@ -22,7 +29,7 @@
   },
   {
     "id": "seed-3",
-    "amount": 65,
+    "amount": 90,
     "category": "Dining",
     "date": "2026-04-05",
     "createdAt": "2026-04-05T12:00:00.000Z"
