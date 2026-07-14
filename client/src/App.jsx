@@ -29,6 +29,7 @@ function App() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [error, setError] = useState("");
   const [advice, setAdvice] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchTransactions();
@@ -212,6 +213,13 @@ function App() {
     }, {})
   );
 
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredTransactions = normalizedSearch
+    ? transactions.filter((transaction) =>
+        (transaction.category || "").toLowerCase().includes(normalizedSearch)
+      )
+    : transactions;
+
   return (
     <div className="app-shell">
       <div className="background-orb background-orb-left" />
@@ -339,11 +347,27 @@ function App() {
               <p>Recent expenses across all categories.</p>
             </div>
 
+            <div className="transaction-search">
+              <label htmlFor="transaction-search">
+                Search by category
+                <input
+                  id="transaction-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="e.g. groceries"
+                  autoComplete="off"
+                />
+              </label>
+            </div>
+
             {loading ? (
               <div className="empty-state">Loading transactions...</div>
-            ) : transactions.length ? (
+            ) : !transactions.length ? (
+              <div className="empty-state">No transactions yet. Add your first expense.</div>
+            ) : filteredTransactions.length ? (
               <div className="transaction-list">
-                {transactions.map((transaction) =>
+                {filteredTransactions.map((transaction) =>
                   editingId === transaction.id ? (
                     <form
                       className="transaction-edit-form"
@@ -431,7 +455,9 @@ function App() {
                 )}
               </div>
             ) : (
-              <div className="empty-state">No transactions yet. Add your first expense.</div>
+              <div className="empty-state">
+                No transactions match &ldquo;{searchQuery.trim()}&rdquo;. Try another category.
+              </div>
             )}
           </article>
 
