@@ -294,8 +294,26 @@ select:focus {
   height: 280px;
 }
 
-.income-expense-panel {
+.income-expense-panel,
+.financial-summary-panel {
   margin-top: 1.5rem;
+}
+
+.financial-summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.financial-summary-item {
+  border-radius: 16px;
+  padding: 0.95rem 1.1rem;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: #e5eef5;
+  line-height: 1.45;
 }
 
 .bar-chart-wrapper {

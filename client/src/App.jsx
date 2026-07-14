@@ -186,6 +186,82 @@ function buildMonthlyReports(transactions) {
     });
 }
 
+function buildFinancialSummaryInsights(transactions) {
+  const count = transactions.length;
+
+  if (!count) {
+    return [
+      "Your net balance is $0.00 — add income and expenses to see how you're tracking.",
+      "You haven't recorded any income or expenses yet.",
+      "There's no largest expense to highlight yet.",
+      "No spending category stands out yet.",
+      "You've recorded 0 transactions."
+    ];
+  }
+
+  let totalIncome = 0;
+  let totalExpenses = 0;
+  let largestExpense = null;
+  const categoryTotals = {};
+
+  for (const transaction of transactions) {
+    const type = getTransactionType(transaction);
+    const amount = Number(transaction.amount) || 0;
+
+    if (type === "income") {
+      totalIncome += amount;
+      continue;
+    }
+
+    totalExpenses += amount;
+
+    if (!largestExpense || amount > Number(largestExpense.amount)) {
+      largestExpense = transaction;
+    }
+
+    const category = transaction.category || "Other";
+    categoryTotals[category] = (categoryTotals[category] || 0) + amount;
+  }
+
+  const netBalance = totalIncome - totalExpenses;
+
+  let netInsight;
+  if (netBalance > 0) {
+    netInsight = `You're earning more than you're spending — your net balance is ${formatNetBalance(netBalance)}.`;
+  } else if (netBalance < 0) {
+    netInsight = `You're spending more than you're earning — your net balance is ${formatNetBalance(netBalance)}.`;
+  } else {
+    netInsight = "Your income and expenses are perfectly balanced right now.";
+  }
+
+  const incomeVsExpenseInsight =
+    totalIncome === 0 && totalExpenses === 0
+      ? "You haven't recorded any income or expenses yet."
+      : `You've earned ${formatCurrency(totalIncome)} in income versus ${formatCurrency(totalExpenses)} in expenses.`;
+
+  const largestExpenseInsight = largestExpense
+    ? `Your largest expense was ${formatCurrency(Number(largestExpense.amount))} on ${
+        largestExpense.category || "Other"
+      }.`
+    : "You haven't recorded any expenses yet.";
+
+  const highestCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
+  const highestCategoryInsight = highestCategoryEntry
+    ? `${highestCategoryEntry[0]} is your highest expense category at ${formatCurrency(highestCategoryEntry[1])}.`
+    : "No spending category stands out yet.";
+
+  const countLabel = count === 1 ? "transaction" : "transactions";
+  const countInsight = `You've recorded ${count} ${countLabel}.`;
+
+  return [
+    netInsight,
+    incomeVsExpenseInsight,
+    largestExpenseInsight,
+    highestCategoryInsight,
+    countInsight
+  ];
+}
+
 function App() {
   const [transactions, setTransactions] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -432,6 +508,8 @@ function App() {
       net: Number(report.net.toFixed(2))
     }));
 
+  const financialSummaryInsights = buildFinancialSummaryInsights(transactions);
+
   return (
     <div className="app-shell">
       <div className="background-orb background-orb-left" />
@@ -473,6 +551,21 @@ function App() {
               {formatNetBalance(netBalance)}
             </strong>
           </div>
+        </section>
+
+        <section className="panel financial-summary-panel">
+          <div className="panel-header">
+            <h2>Financial Summary</h2>
+            <p>Quick insights calculated from your current transactions.</p>
+          </div>
+
+          <ul className="financial-summary-list">
+            {financialSummaryInsights.map((insight, index) => (
+              <li className="financial-summary-item" key={index}>
+                {insight}
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className="grid-layout">
