@@ -1,58 +1,214 @@
-# Personal Finance App
+# 💰 Personal Finance Dashboard (Full-Stack Expense Tracker)
 
-A full-stack personal finance web app with a React dashboard, Express API, in-memory transaction storage, and OpenAI-powered financial analysis.
+A modern full-stack personal finance dashboard built with **React**, **Express**, and **Node.js**. Users can add, edit, delete, and visualize expenses while receiving AI-powered financial insights through an intuitive dashboard.
 
-## Features
+Built to demonstrate full-stack web development skills including REST APIs, CRUD operations, data persistence, responsive UI design, data visualization, and AI integration.
 
-- Add expenses with amount, category, and date
-- View a live transaction list
-- See spending split by category in a pie chart
-- Analyze your finances with AI-generated advice
-- Responsive, modern UI
+---
 
-## Project Structure
+# 🌐 Live Demo
 
-- `client/` React frontend built with Vite
-- `server/` Express backend with in-memory storage and OpenAI integration
+🚧 Coming Soon...
 
-## Setup
+---
 
-1. Install dependencies:
+# 📸 Screenshots
+
+> Dashboard screenshots will be added as the project evolves.
+
+---
+
+# ✨ Features
+
+- ✅ Add new transactions
+- ✅ Edit existing transactions
+- ✅ Delete transactions
+- ✅ Persistent transaction storage
+- ✅ Spending dashboard
+- ✅ Category pie chart visualization
+- ✅ AI-powered financial advice
+- ✅ RESTful API backend
+- ✅ Responsive modern UI
+- 🚧 Search transactions
+- 🚧 Filter by category
+- 🚧 Monthly reports
+- 🚧 Income tracking
+
+---
+
+# 🛠️ Tech Stack
+
+## Frontend
+
+- React
+- Vite
+- CSS
+- Recharts
+
+## Backend
+
+- Node.js
+- Express.js
+- OpenAI API
+
+## Data Storage
+
+- JSON file-based persistence
+
+---
+
+# 📂 Project Structure
+
+```text
+client/
+├── src/
+├── public/
+└── package.json
+
+server/
+├── index.js
+├── transactions.json
+├── .env.example
+└── package.json
+```
+
+---
+
+# 🚀 Getting Started
+
+## 1. Install dependencies
 
 ```bash
 npm run install:all
 ```
 
-2. Create an environment file for the server by copying `server/.env.example` to `server/.env`.
+## 2. Configure environment variables
 
-3. Add your OpenAI API key to `server/.env`:
+Copy
+
+```text
+server/.env.example
+```
+
+to
+
+```text
+server/.env
+```
+
+Add your OpenAI API key:
 
 ```env
 OPENAI_API_KEY=your_api_key_here
 PORT=4000
 ```
 
-4. Start the backend:
+## 3. Start the backend
 
 ```bash
 npm run dev:server
 ```
 
-5. Start the frontend in another terminal:
+## 4. Start the frontend
 
 ```bash
 npm run dev:client
 ```
 
-6. Open the app at the Vite URL shown in the terminal, usually `http://localhost:5173`.
+Open your browser:
 
-## API Endpoints
+```
+http://localhost:5173
+```
 
-- `GET /transactions` returns all stored transactions
-- `POST /transactions` creates a new transaction
-- `POST /analyze` sends current transactions to OpenAI and returns financial advice
+---
 
-## Notes
+# 📌 REST API
 
-- Transactions are stored only in memory, so restarting the server clears them.
-- If the OpenAI API key is missing, the analysis endpoint returns a helpful error.
+| Method | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/transactions` | Get all transactions |
+| POST | `/transactions` | Create transaction |
+| PUT | `/transactions/:id` | Update transaction |
+| DELETE | `/transactions/:id` | Delete transaction |
+| POST | `/analyze` | Generate AI financial advice |
+
+---
+
+# 📊 Current Functionality
+
+- Track expenses
+- View total spending
+- View total transactions
+- Edit transactions
+- Delete transactions
+- Visualize spending by category
+- Store data between sessions
+- Generate AI financial recommendations
+
+---
+
+# 🗺️ Roadmap
+
+## Completed
+
+- [x] CRUD Transactions
+- [x] Dashboard statistics
+- [x] Spending visualization
+- [x] AI financial insights
+- [x] File-based data persistence
+- [x] Responsive interface
+
+## Planned Features
+
+- [ ] Search transactions
+- [ ] Filter by category
+- [ ] Sort transactions
+- [ ] Monthly spending reports
+- [ ] Income tracking
+- [ ] Budget goals
+- [ ] Export transactions (CSV/PDF)
+- [ ] User authentication
+- [ ] SQL database (PostgreSQL)
+- [ ] Cloud deployment
+- [ ] Dark/Light theme toggle
+
+---
+
+# 📚 What I Learned
+
+Building this project strengthened my understanding of:
+
+- Building REST APIs with Express
+- React state management
+- CRUD application development
+- JSON file persistence
+- Data validation
+- API integration with OpenAI
+- Responsive UI design
+- Data visualization using Recharts
+- Git and GitHub workflows
+
+---
+
+# 👤 Author
+
+**Yosef Mekonnen**
+
+Computer Science Student — University of Prince Edward Island (UPEI)
+
+GitHub:
+https://github.com/Yosef-dev116
+
+LinkedIn:
+https://www.linkedin.com/in/yosefmekonnen
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+⭐ Built as a portfolio project to demonstrate modern full-stack web development skills and continuously expanded with new features.
