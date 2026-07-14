@@ -4,11 +4,45 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 const API_BASE_URL = "http://localhost:4000";
 const COLORS = ["#0f766e", "#ea580c", "#0284c7", "#7c3aed", "#65a30d", "#dc2626"];
 
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "highest", label: "Highest amount" },
+  { value: "lowest", label: "Lowest amount" },
+  { value: "category", label: "Category A-Z" }
+];
+
 const initialForm = {
   amount: "",
   category: "",
   date: new Date().toISOString().slice(0, 10)
 };
+
+function sortTransactions(list, sortBy) {
+  const sorted = [...list];
+
+  switch (sortBy) {
+    case "oldest":
+      return sorted.sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+    case "highest":
+      return sorted.sort((a, b) => Number(b.amount) - Number(a.amount));
+    case "lowest":
+      return sorted.sort((a, b) => Number(a.amount) - Number(b.amount));
+    case "category":
+      return sorted.sort((a, b) =>
+        (a.category || "").localeCompare(b.category || "", undefined, {
+          sensitivity: "base"
+        })
+      );
+    case "newest":
+    default:
+      return sorted.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+  }
+}
 
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-US", {
@@ -30,6 +64,7 @@ function App() {
   const [error, setError] = useState("");
   const [advice, setAdvice] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
 
   useEffect(() => {
     fetchTransactions();
@@ -219,6 +254,7 @@ function App() {
         (transaction.category || "").toLowerCase().includes(normalizedSearch)
       )
     : transactions;
+  const visibleTransactions = sortTransactions(filteredTransactions, sortBy);
 
   return (
     <div className="app-shell">
@@ -347,7 +383,7 @@ function App() {
               <p>Recent expenses across all categories.</p>
             </div>
 
-            <div className="transaction-search">
+            <div className="transaction-toolbar">
               <label htmlFor="transaction-search">
                 Search by category
                 <input
@@ -359,15 +395,30 @@ function App() {
                   autoComplete="off"
                 />
               </label>
+
+              <label htmlFor="transaction-sort">
+                Sort by
+                <select
+                  id="transaction-sort"
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value)}
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             {loading ? (
               <div className="empty-state">Loading transactions...</div>
             ) : !transactions.length ? (
               <div className="empty-state">No transactions yet. Add your first expense.</div>
-            ) : filteredTransactions.length ? (
+            ) : visibleTransactions.length ? (
               <div className="transaction-list">
-                {filteredTransactions.map((transaction) =>
+                {visibleTransactions.map((transaction) =>
                   editingId === transaction.id ? (
                     <form
                       className="transaction-edit-form"

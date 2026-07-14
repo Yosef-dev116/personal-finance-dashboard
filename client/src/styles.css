@@ -21,7 +21,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -250,21 +251,55 @@ input:focus {
   margin-top: 0.28rem;
 }
 
-.transaction-search {
+.transaction-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(10rem, 1fr);
+  gap: 0.85rem 1rem;
   margin-bottom: 1rem;
+  align-items: end;
 }
 
-.transaction-search label {
+.transaction-toolbar label {
   display: grid;
   gap: 0.45rem;
   color: #dbe7f0;
+  min-width: 0;
 }
 
-.transaction-search input[type="search"] {
+.transaction-toolbar input[type="search"],
+.transaction-toolbar select {
   width: 100%;
 }
 
-.transaction-search input[type="search"]::-webkit-search-cancel-button {
+.transaction-toolbar select {
+  appearance: none;
+  background-color: rgba(30, 41, 59, 0.7);
+  background-image: linear-gradient(45deg, transparent 50%, #94a3b8 50%),
+    linear-gradient(135deg, #94a3b8 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.15rem) calc(50% - 0.15rem),
+    calc(100% - 0.75rem) calc(50% - 0.15rem);
+  background-size: 0.4rem 0.4rem, 0.4rem 0.4rem;
+  background-repeat: no-repeat;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 14px;
+  padding: 0.95rem 2.4rem 0.95rem 1rem;
+  color: #f8fafc;
+  outline: none;
+  cursor: pointer;
+}
+
+.transaction-toolbar select:focus {
+  border-color: rgba(125, 211, 252, 0.8);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
+}
+
+.transaction-toolbar select option {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.transaction-toolbar input[type="search"]::-webkit-search-cancel-button {
   cursor: pointer;
 }
 
@@ -419,12 +454,19 @@ input:focus {
     padding: 1.1rem;
   }
 
-  .transaction-search {
+  .transaction-toolbar {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
     margin-bottom: 0.85rem;
   }
 
-  .transaction-search input {
+  .transaction-toolbar input,
+  .transaction-toolbar select {
     padding: 0.85rem 0.9rem;
+  }
+
+  .transaction-toolbar select {
+    padding-right: 2.2rem;
   }
 
   .legend-item,
