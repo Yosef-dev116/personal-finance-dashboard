@@ -11,6 +11,7 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TRANSACTIONS_PATH = path.join(__dirname, "transactions.json");
+const ALLOWED_TYPES = new Set(["income", "expense"]);
 
 const DEFAULT_TRANSACTIONS = [
   {
@@ -18,6 +19,7 @@ const DEFAULT_TRANSACTIONS = [
     amount: 42.5,
     category: "Groceries",
     date: "2026-04-02",
+    type: "expense",
     createdAt: "2026-04-02T12:00:00.000Z"
   },
   {
@@ -25,6 +27,7 @@ const DEFAULT_TRANSACTIONS = [
     amount: 18,
     category: "Transport",
     date: "2026-04-03",
+    type: "expense",
     createdAt: "2026-04-03T12:00:00.000Z"
   },
   {
@@ -32,9 +35,29 @@ const DEFAULT_TRANSACTIONS = [
     amount: 65,
     category: "Dining",
     date: "2026-04-05",
+    type: "expense",
     createdAt: "2026-04-05T12:00:00.000Z"
   }
 ];
+
+function normalizeTransaction(transaction) {
+  return {
+    ...transaction,
+    type: ALLOWED_TYPES.has(transaction.type) ? transaction.type : "expense"
+  };
+}
+
+function parseTransactionType(type) {
+  if (type === undefined || type === null || type === "") {
+    return "expense";
+  }
+
+  if (!ALLOWED_TYPES.has(type)) {
+    return null;
+  }
+
+  return type;
+}
 
 function loadTransactionsFromFile() {
   try {
@@ -46,7 +69,7 @@ function loadTransactionsFromFile() {
     if (!Array.isArray(parsed)) {
       return DEFAULT_TRANSACTIONS;
     }
-    return parsed;
+    return parsed.map(normalizeTransaction);
   } catch (err) {
     console.error("Failed to load transactions.json:", err.message);
     return DEFAULT_TRANSACTIONS;
@@ -64,6 +87,7 @@ app.use(cors());
 app.use(express.json());
 
 let transactions = loadTransactionsFromFile();
+saveTransactionsToFile();
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -78,7 +102,8 @@ app.get("/transactions", (_req, res) => {
 });
 
 app.post("/transactions", (req, res) => {
-  const { amount, category, date } = req.body;
+  const { amount, category, date, type } = req.body;
+  const transactionType = parseTransactionType(type);
 
   if (!amount || Number(amount) <= 0) {
     return res.status(400).json({ error: "Amount must be greater than 0." });
@@ -92,11 +117,16 @@ app.post("/transactions", (req, res) => {
     return res.status(400).json({ error: "A valid date is required." });
   }
 
+  if (!transactionType) {
+    return res.status(400).json({ error: 'Type must be either "income" or "expense".' });
+  }
+
   const transaction = {
     id: randomUUID(),
     amount: Number(amount),
     category: category.trim(),
     date,
+    type: transactionType,
     createdAt: new Date().toISOString()
   };
 
@@ -112,7 +142,8 @@ app.put("/transactions/:id", (req, res) => {
     return res.status(404).json({ error: "Transaction not found." });
   }
 
-  const { amount, category, date } = req.body;
+  const { amount, category, date, type } = req.body;
+  const transactionType = parseTransactionType(type);
 
   if (!amount || Number(amount) <= 0) {
     return res.status(400).json({ error: "Amount must be greater than 0." });
@@ -126,11 +157,16 @@ app.put("/transactions/:id", (req, res) => {
     return res.status(400).json({ error: "A valid date is required." });
   }
 
+  if (!transactionType) {
+    return res.status(400).json({ error: 'Type must be either "income" or "expense".' });
+  }
+
   const updatedTransaction = {
     ...transactions[index],
     amount: Number(amount),
     category: category.trim(),
-    date
+    date,
+    type: transactionType
   };
 
   transactions = [
@@ -168,26 +204,47 @@ app.post("/analyze", async (req, res) => {
   }
 
   try {
-    const totalSpend = submittedTransactions.reduce((sum, transaction) => {
-      return sum + Number(transaction.amount || 0);
+    const normalized = submittedTransactions.map(normalizeTransaction);
+
+    const totalIncome = normalized.reduce((sum, transaction) => {
+      return transaction.type === "income" ? sum + Number(transaction.amount || 0) : sum;
     }, 0);
 
-    const categorySummary = submittedTransactions.reduce((summary, transaction) => {
-      const key = transaction.category || "Other";
-      summary[key] = (summary[key] || 0) + Number(transaction.amount || 0);
-      return summary;
-    }, {});
+    const totalExpenses = normalized.reduce((sum, transaction) => {
+      return transaction.type === "expense" ? sum + Number(transaction.amount || 0) : sum;
+    }, 0);
+
+    const netBalance = totalIncome - totalExpenses;
+
+    const expenseCategorySummary = normalized
+      .filter((transaction) => transaction.type === "expense")
+      .reduce((summary, transaction) => {
+        const key = transaction.category || "Other";
+        summary[key] = (summary[key] || 0) + Number(transaction.amount || 0);
+        return summary;
+      }, {});
+
+    const incomeCategorySummary = normalized
+      .filter((transaction) => transaction.type === "income")
+      .reduce((summary, transaction) => {
+        const key = transaction.category || "Other";
+        summary[key] = (summary[key] || 0) + Number(transaction.amount || 0);
+        return summary;
+      }, {});
 
     const prompt = [
       "You are a practical personal finance coach.",
-      "Review the user's expense history and provide concise, useful advice.",
+      "Review the user's income and expense history and provide concise, useful advice.",
       "Give:",
       "1. A one-sentence overview",
       "2. Three actionable recommendations",
-      "3. One spending pattern worth watching",
-      `Total spend: ${totalSpend.toFixed(2)}`,
-      `Category summary: ${JSON.stringify(categorySummary)}`,
-      `Transactions: ${JSON.stringify(submittedTransactions)}`
+      "3. One spending or income pattern worth watching",
+      `Total income: ${totalIncome.toFixed(2)}`,
+      `Total expenses: ${totalExpenses.toFixed(2)}`,
+      `Net balance: ${netBalance.toFixed(2)}`,
+      `Income category summary: ${JSON.stringify(incomeCategorySummary)}`,
+      `Expense category summary: ${JSON.stringify(expenseCategorySummary)}`,
+      `Transactions (include type): ${JSON.stringify(normalized)}`
     ].join("\n");
 
     const response = await openai.responses.create({

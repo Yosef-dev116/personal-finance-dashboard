@@ -1,9 +1,18 @@
 [
   {
+    "id": "af60b208-3723-46df-a48f-4c08a6163224",
+    "amount": 500,
+    "category": "gift",
+    "date": "2026-07-14",
+    "type": "income",
+    "createdAt": "2026-07-14T17:15:00.943Z"
+  },
+  {
     "id": "6043d430-f9ca-426d-96cb-a0fa1cb2c756",
     "amount": 55,
     "category": "birthday",
     "date": "2026-07-14",
+    "type": "expense",
     "createdAt": "2026-07-14T15:31:56.411Z"
   },
   {
@@ -11,6 +20,7 @@
     "amount": 29.95,
     "category": "milk",
     "date": "2026-07-09",
+    "type": "expense",
     "createdAt": "2026-07-09T14:41:10.977Z"
   },
   {
@@ -18,6 +28,7 @@
     "amount": 42.5,
     "category": "Groceries",
     "date": "2026-04-02",
+    "type": "expense",
     "createdAt": "2026-04-02T12:00:00.000Z"
   },
   {
@@ -25,6 +36,7 @@
     "amount": 18,
     "category": "Transport",
     "date": "2026-04-03",
+    "type": "expense",
     "createdAt": "2026-04-03T12:00:00.000Z"
   },
   {
@@ -32,6 +44,7 @@
     "amount": 90,
     "category": "Dining",
     "date": "2026-04-05",
+    "type": "expense",
     "createdAt": "2026-04-05T12:00:00.000Z"
   }
 ]

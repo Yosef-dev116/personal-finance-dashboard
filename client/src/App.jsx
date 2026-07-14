@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   Cell,
+  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -14,6 +17,8 @@ import {
 
 const API_BASE_URL = "http://localhost:4000";
 const COLORS = ["#0f766e", "#ea580c", "#0284c7", "#7c3aed", "#65a30d", "#dc2626"];
+const INCOME_COLOR = "#4ade80";
+const EXPENSE_COLOR = "#f87171";
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest first" },
@@ -26,8 +31,13 @@ const SORT_OPTIONS = [
 const initialForm = {
   amount: "",
   category: "",
-  date: new Date().toISOString().slice(0, 10)
+  date: new Date().toISOString().slice(0, 10),
+  type: "expense"
 };
+
+function getTransactionType(transaction) {
+  return transaction?.type === "income" ? "income" : "expense";
+}
 
 function sortTransactions(list, sortBy) {
   const sorted = [...list];
@@ -62,6 +72,23 @@ function formatCurrency(value) {
   }).format(value);
 }
 
+function formatSignedAmount(amount, type) {
+  const absolute = formatCurrency(Math.abs(Number(amount) || 0));
+  return type === "income" ? `+${absolute}` : `-${absolute}`;
+}
+
+function getNetBalanceClass(net) {
+  if (net > 0) return "amount-income";
+  if (net < 0) return "amount-expense";
+  return "amount-neutral";
+}
+
+function formatNetBalance(net) {
+  const value = Number(net) || 0;
+  if (value === 0) return formatCurrency(0);
+  return formatSignedAmount(Math.abs(value), value > 0 ? "income" : "expense");
+}
+
 function getMonthKey(dateString) {
   if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
     return dateString.slice(0, 7);
@@ -94,6 +121,8 @@ function buildMonthlyReports(transactions) {
 
   for (const transaction of transactions) {
     const key = getMonthKey(transaction.date);
+    const type = getTransactionType(transaction);
+    const amount = Number(transaction.amount);
 
     if (!groups[key]) {
       groups[key] = {
@@ -101,43 +130,58 @@ function buildMonthlyReports(transactions) {
         label: formatMonthLabel(key),
         shortLabel: formatShortMonthLabel(key),
         transactions: [],
-        total: 0
+        income: 0,
+        expenses: 0
       };
     }
 
     groups[key].transactions.push(transaction);
-    groups[key].total += Number(transaction.amount);
+
+    if (type === "income") {
+      groups[key].income += amount;
+    } else {
+      groups[key].expenses += amount;
+    }
   }
 
   return Object.keys(groups)
     .sort((a, b) => b.localeCompare(a))
     .map((key) => {
       const group = groups[key];
-      const largestExpense = group.transactions.reduce((largest, transaction) =>
-        Number(transaction.amount) > Number(largest.amount) ? transaction : largest
+      const expensesOnly = group.transactions.filter(
+        (transaction) => getTransactionType(transaction) === "expense"
       );
 
+      const largestExpense = expensesOnly.length
+        ? expensesOnly.reduce((largest, transaction) =>
+            Number(transaction.amount) > Number(largest.amount) ? transaction : largest
+          )
+        : null;
+
       const categoryTotals = {};
-      for (const transaction of group.transactions) {
+      for (const transaction of expensesOnly) {
         const category = transaction.category || "Other";
         categoryTotals[category] = (categoryTotals[category] || 0) + Number(transaction.amount);
       }
 
-      const [highestCategoryName, highestCategoryAmount] = Object.entries(categoryTotals).sort(
-        (a, b) => b[1] - a[1]
-      )[0];
+      const highestCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
+      const net = group.income - group.expenses;
 
       return {
         key: group.key,
         label: group.label,
         shortLabel: group.shortLabel,
-        total: group.total,
+        income: group.income,
+        expenses: group.expenses,
+        net,
         count: group.transactions.length,
         largestExpense,
-        highestCategory: {
-          name: highestCategoryName,
-          amount: highestCategoryAmount
-        }
+        highestCategory: highestCategoryEntry
+          ? {
+              name: highestCategoryEntry[0],
+              amount: highestCategoryEntry[1]
+            }
+          : null
       };
     });
 }
@@ -196,7 +240,8 @@ function App() {
         body: JSON.stringify({
           amount: Number(form.amount),
           category: form.category,
-          date: form.date
+          date: form.date,
+          type: form.type
         })
       });
 
@@ -220,7 +265,8 @@ function App() {
     setEditForm({
       amount: String(transaction.amount),
       category: transaction.category,
-      date: transaction.date
+      date: transaction.date,
+      type: getTransactionType(transaction)
     });
     setError("");
   }
@@ -245,7 +291,8 @@ function App() {
         body: JSON.stringify({
           amount: Number(editForm.amount),
           category: editForm.category,
-          date: editForm.date
+          date: editForm.date,
+          type: editForm.type
         })
       });
 
@@ -306,7 +353,12 @@ function App() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ transactions })
+        body: JSON.stringify({
+          transactions: transactions.map((transaction) => ({
+            ...transaction,
+            type: getTransactionType(transaction)
+          }))
+        })
       });
 
       const data = await response.json();
@@ -323,22 +375,39 @@ function App() {
     }
   }
 
-  const totalSpend = transactions.reduce((sum, transaction) => {
-    return sum + Number(transaction.amount);
+  const totalIncome = transactions.reduce((sum, transaction) => {
+    return getTransactionType(transaction) === "income"
+      ? sum + Number(transaction.amount)
+      : sum;
   }, 0);
 
-  const chartData = Object.values(
-    transactions.reduce((summary, transaction) => {
-      const category = transaction.category || "Other";
+  const totalExpenses = transactions.reduce((sum, transaction) => {
+    return getTransactionType(transaction) === "expense"
+      ? sum + Number(transaction.amount)
+      : sum;
+  }, 0);
 
-      if (!summary[category]) {
-        summary[category] = { name: category, value: 0 };
-      }
+  const netBalance = totalIncome - totalExpenses;
 
-      summary[category].value += Number(transaction.amount);
-      return summary;
-    }, {})
+  const expenseChartData = Object.values(
+    transactions
+      .filter((transaction) => getTransactionType(transaction) === "expense")
+      .reduce((summary, transaction) => {
+        const category = transaction.category || "Other";
+
+        if (!summary[category]) {
+          summary[category] = { name: category, value: 0 };
+        }
+
+        summary[category].value += Number(transaction.amount);
+        return summary;
+      }, {})
   );
+
+  const incomeVsExpenseData = [
+    { name: "Income", value: Number(totalIncome.toFixed(2)), fill: INCOME_COLOR },
+    { name: "Expenses", value: Number(totalExpenses.toFixed(2)), fill: EXPENSE_COLOR }
+  ];
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const filteredTransactions = normalizedSearch
@@ -358,7 +427,9 @@ function App() {
     .reverse()
     .map((report) => ({
       month: report.shortLabel,
-      total: Number(report.total.toFixed(2))
+      income: Number(report.income.toFixed(2)),
+      expenses: Number(report.expenses.toFixed(2)),
+      net: Number(report.net.toFixed(2))
     }));
 
   return (
@@ -370,17 +441,14 @@ function App() {
         <section className="hero-card">
           <div>
             <p className="eyebrow">Personal finance dashboard</p>
-            <h1>Track spending clearly and get practical AI guidance.</h1>
+            <h1>Track income and spending with practical AI guidance.</h1>
             <p className="hero-copy">
-              Add expenses, review where your money goes, and generate tailored financial advice from your recent transactions.
+              Add income and expenses, review your balance, and generate tailored financial advice
+              from your recent transactions.
             </p>
           </div>
 
           <div className="hero-stats">
-            <div className="stat-card">
-              <span>Total spend</span>
-              <strong>{formatCurrency(totalSpend)}</strong>
-            </div>
             <div className="stat-card">
               <span>Transactions</span>
               <strong>{transactions.length}</strong>
@@ -388,14 +456,45 @@ function App() {
           </div>
         </section>
 
+        <section className="summary-cards">
+          <div className="stat-card summary-card">
+            <span>Total Income</span>
+            <strong className="amount-income">{formatSignedAmount(totalIncome, "income")}</strong>
+          </div>
+          <div className="stat-card summary-card">
+            <span>Total Expenses</span>
+            <strong className="amount-expense">
+              {formatSignedAmount(totalExpenses, "expense")}
+            </strong>
+          </div>
+          <div className="stat-card summary-card">
+            <span>Net Balance</span>
+            <strong className={getNetBalanceClass(netBalance)}>
+              {formatNetBalance(netBalance)}
+            </strong>
+          </div>
+        </section>
+
         <section className="grid-layout">
           <article className="panel">
             <div className="panel-header">
-              <h2>Add expense</h2>
-              <p>Record a new transaction in seconds.</p>
+              <h2>Add Transaction</h2>
+              <p>Record income or an expense in seconds.</p>
             </div>
 
             <form className="expense-form" onSubmit={handleSubmit}>
+              <label>
+                Type
+                <select
+                  value={form.type}
+                  onChange={(event) => setForm({ ...form, type: event.target.value })}
+                  required
+                >
+                  <option value="expense">Expense</option>
+                  <option value="income">Income</option>
+                </select>
+              </label>
+
               <label>
                 Amount
                 <input
@@ -415,7 +514,7 @@ function App() {
                   type="text"
                   value={form.category}
                   onChange={(event) => setForm({ ...form, category: event.target.value })}
-                  placeholder="Groceries"
+                  placeholder={form.type === "income" ? "Salary" : "Groceries"}
                   required
                 />
               </label>
@@ -431,7 +530,7 @@ function App() {
               </label>
 
               <button className="primary-button" type="submit" disabled={submitting}>
-                {submitting ? "Saving..." : "Add expense"}
+                {submitting ? "Saving..." : "Add transaction"}
               </button>
             </form>
           </article>
@@ -439,22 +538,22 @@ function App() {
           <article className="panel chart-panel">
             <div className="panel-header">
               <h2>Spending by category</h2>
-              <p>Your category split updates automatically.</p>
+              <p>Your expense category split updates automatically.</p>
             </div>
 
             <div className="chart-wrapper">
-              {chartData.length ? (
+              {expenseChartData.length ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
                     <Pie
-                      data={chartData}
+                      data={expenseChartData}
                       dataKey="value"
                       nameKey="name"
                       innerRadius={70}
                       outerRadius={105}
                       paddingAngle={4}
                     >
-                      {chartData.map((entry, index) => (
+                      {expenseChartData.map((entry, index) => (
                         <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -462,12 +561,12 @@ function App() {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="empty-state">Add transactions to see your spending chart.</div>
+                <div className="empty-state">Add expenses to see your spending chart.</div>
               )}
             </div>
 
             <div className="category-legend">
-              {chartData.map((item, index) => (
+              {expenseChartData.map((item, index) => (
                 <div className="legend-item" key={item.name}>
                   <span
                     className="legend-swatch"
@@ -481,11 +580,59 @@ function App() {
           </article>
         </section>
 
+        <section className="panel income-expense-panel">
+          <div className="panel-header">
+            <h2>Income vs Expense</h2>
+            <p>Compare total money in against total money out.</p>
+          </div>
+
+          <div className="chart-wrapper bar-chart-wrapper">
+            {totalIncome > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={incomeVsExpenseData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="rgba(148, 163, 184, 0.18)" vertical={false} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(value) => `$${value}`}
+                    width={56}
+                  />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(value)}
+                    contentStyle={{
+                      background: "rgba(15, 23, 42, 0.95)",
+                      border: "1px solid rgba(148, 163, 184, 0.25)",
+                      borderRadius: "12px",
+                      color: "#f8fafc"
+                    }}
+                  />
+                  <Bar dataKey="value" radius={[12, 12, 4, 4]}>
+                    {incomeVsExpenseData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="empty-state">
+                Add an income transaction to compare income and expenses.
+              </div>
+            )}
+          </div>
+        </section>
+
         <section className="panel monthly-reports-panel">
           <div className="panel-header monthly-reports-header">
             <div>
               <h2>Monthly reports</h2>
-              <p>Spending summaries grouped by month and year.</p>
+              <p>Income and expense summaries grouped by month and year.</p>
             </div>
 
             {monthlyReports.length ? (
@@ -511,8 +658,22 @@ function App() {
               <div className="monthly-report-card">
                 <div className="monthly-report-stats">
                   <div className="stat-card">
-                    <span>Total spending</span>
-                    <strong>{formatCurrency(selectedMonthReport.total)}</strong>
+                    <span>Monthly Income</span>
+                    <strong className="amount-income">
+                      {formatSignedAmount(selectedMonthReport.income, "income")}
+                    </strong>
+                  </div>
+                  <div className="stat-card">
+                    <span>Monthly Expenses</span>
+                    <strong className="amount-expense">
+                      {formatSignedAmount(selectedMonthReport.expenses, "expense")}
+                    </strong>
+                  </div>
+                  <div className="stat-card">
+                    <span>Monthly Net Balance</span>
+                    <strong className={getNetBalanceClass(selectedMonthReport.net)}>
+                      {formatNetBalance(selectedMonthReport.net)}
+                    </strong>
                   </div>
                   <div className="stat-card">
                     <span>Transactions</span>
@@ -520,30 +681,52 @@ function App() {
                   </div>
                   <div className="stat-card">
                     <span>Largest expense</span>
-                    <strong>{formatCurrency(selectedMonthReport.largestExpense.amount)}</strong>
-                    <p>{selectedMonthReport.largestExpense.category}</p>
+                    <strong className="amount-expense">
+                      {selectedMonthReport.largestExpense
+                        ? formatSignedAmount(
+                            selectedMonthReport.largestExpense.amount,
+                            "expense"
+                          )
+                        : "—"}
+                    </strong>
+                    <p>{selectedMonthReport.largestExpense?.category || "No expenses"}</p>
                   </div>
                   <div className="stat-card">
                     <span>Highest category</span>
-                    <strong>{selectedMonthReport.highestCategory.name}</strong>
-                    <p>{formatCurrency(selectedMonthReport.highestCategory.amount)}</p>
+                    <strong>{selectedMonthReport.highestCategory?.name || "—"}</strong>
+                    <p>
+                      {selectedMonthReport.highestCategory ? (
+                        <span className="amount-expense">
+                          {formatSignedAmount(
+                            selectedMonthReport.highestCategory.amount,
+                            "expense"
+                          )}
+                        </span>
+                      ) : (
+                        "No expenses"
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="monthly-trend">
                 <div className="panel-header">
-                  <h3>Monthly spending trend</h3>
-                  <p>Compare total spend across months with transactions.</p>
+                  <h3>Monthly income & expense trend</h3>
+                  <p>Compare money in and out across months with transactions.</p>
                 </div>
 
                 <div className="chart-wrapper trend-chart-wrapper">
                   <ResponsiveContainer width="100%" height={260}>
                     <AreaChart data={monthlyTrendData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="monthlySpendGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.55} />
-                          <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.05} />
+                        <linearGradient id="monthlyIncomeGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#4ade80" stopOpacity={0.45} />
+                          <stop offset="95%" stopColor="#4ade80" stopOpacity={0.05} />
+                        </linearGradient>
+                        <linearGradient id="monthlyExpenseGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f87171" stopOpacity={0.45} />
+                          <stop offset="95%" stopColor="#f87171" stopOpacity={0.05} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid stroke="rgba(148, 163, 184, 0.18)" vertical={false} />
@@ -561,7 +744,10 @@ function App() {
                         width={56}
                       />
                       <Tooltip
-                        formatter={(value) => [formatCurrency(value), "Total spend"]}
+                        formatter={(value, name) => [
+                          formatCurrency(value),
+                          name === "income" ? "Income" : name === "expenses" ? "Expenses" : "Net"
+                        ]}
                         contentStyle={{
                           background: "rgba(15, 23, 42, 0.95)",
                           border: "1px solid rgba(148, 163, 184, 0.25)",
@@ -569,12 +755,20 @@ function App() {
                           color: "#f8fafc"
                         }}
                       />
+                      <Legend />
                       <Area
                         type="monotone"
-                        dataKey="total"
-                        stroke="#38bdf8"
+                        dataKey="income"
+                        stroke="#4ade80"
                         strokeWidth={2.5}
-                        fill="url(#monthlySpendGradient)"
+                        fill="url(#monthlyIncomeGradient)"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="expenses"
+                        stroke="#f87171"
+                        strokeWidth={2.5}
+                        fill="url(#monthlyExpenseGradient)"
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -583,7 +777,7 @@ function App() {
             </>
           ) : (
             <div className="empty-state">
-              Add transactions to unlock monthly spending reports.
+              Add transactions to unlock monthly income and expense reports.
             </div>
           )}
         </section>
@@ -592,7 +786,7 @@ function App() {
           <article className="panel transactions-panel">
             <div className="panel-header">
               <h2>Transactions</h2>
-              <p>Recent expenses across all categories.</p>
+              <p>Recent income and expenses across all categories.</p>
             </div>
 
             <div className="transaction-toolbar">
@@ -627,7 +821,7 @@ function App() {
             {loading ? (
               <div className="empty-state">Loading transactions...</div>
             ) : !transactions.length ? (
-              <div className="empty-state">No transactions yet. Add your first expense.</div>
+              <div className="empty-state">No transactions yet. Add your first transaction.</div>
             ) : visibleTransactions.length ? (
               <div className="transaction-list">
                 {visibleTransactions.map((transaction) =>
@@ -637,6 +831,19 @@ function App() {
                       key={transaction.id}
                       onSubmit={handleEditSave}
                     >
+                      <label>
+                        Type
+                        <select
+                          value={editForm.type}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, type: event.target.value })
+                          }
+                          required
+                        >
+                          <option value="expense">Expense</option>
+                          <option value="income">Income</option>
+                        </select>
+                      </label>
                       <label>
                         Amount
                         <input
@@ -690,10 +897,26 @@ function App() {
                     <div className="transaction-row" key={transaction.id}>
                       <div>
                         <strong>{transaction.category}</strong>
-                        <p>{new Date(transaction.date).toLocaleDateString()}</p>
+                        <p>
+                          {new Date(transaction.date).toLocaleDateString()}
+                          <span className={`type-badge type-badge-${getTransactionType(transaction)}`}>
+                            {getTransactionType(transaction)}
+                          </span>
+                        </p>
                       </div>
                       <div className="transaction-actions">
-                        <span>{formatCurrency(transaction.amount)}</span>
+                        <span
+                          className={
+                            getTransactionType(transaction) === "income"
+                              ? "amount-income"
+                              : "amount-expense"
+                          }
+                        >
+                          {formatSignedAmount(
+                            transaction.amount,
+                            getTransactionType(transaction)
+                          )}
+                        </span>
                         <button
                           className="edit-button"
                           type="button"
@@ -727,7 +950,7 @@ function App() {
           <article className="panel analysis-panel">
             <div className="panel-header">
               <h2>AI financial advice</h2>
-              <p>Generate a summary based on your current spending.</p>
+              <p>Generate a summary based on your income and spending.</p>
             </div>
 
             <button
@@ -752,4 +975,3 @@ function App() {
 }
 
 export default App;
-
