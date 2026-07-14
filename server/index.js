@@ -105,6 +105,43 @@ app.post("/transactions", (req, res) => {
   res.status(201).json(transaction);
 });
 
+app.put("/transactions/:id", (req, res) => {
+  const index = transactions.findIndex((transaction) => transaction.id === req.params.id);
+
+  if (index === -1) {
+    return res.status(404).json({ error: "Transaction not found." });
+  }
+
+  const { amount, category, date } = req.body;
+
+  if (!amount || Number(amount) <= 0) {
+    return res.status(400).json({ error: "Amount must be greater than 0." });
+  }
+
+  if (!category || typeof category !== "string") {
+    return res.status(400).json({ error: "Category is required." });
+  }
+
+  if (!date || Number.isNaN(Date.parse(date))) {
+    return res.status(400).json({ error: "A valid date is required." });
+  }
+
+  const updatedTransaction = {
+    ...transactions[index],
+    amount: Number(amount),
+    category: category.trim(),
+    date
+  };
+
+  transactions = [
+    ...transactions.slice(0, index),
+    updatedTransaction,
+    ...transactions.slice(index + 1)
+  ];
+  saveTransactionsToFile();
+  res.json(updatedTransaction);
+});
+
 app.delete("/transactions/:id", (req, res) => {
   const index = transactions.findIndex((transaction) => transaction.id === req.params.id);
 

@@ -24,6 +24,9 @@ function App() {
   const [submitting, setSubmitting] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(initialForm);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [error, setError] = useState("");
   const [advice, setAdvice] = useState("");
 
@@ -84,6 +87,59 @@ function App() {
     }
   }
 
+  function startEdit(transaction) {
+    setEditingId(transaction.id);
+    setEditForm({
+      amount: String(transaction.amount),
+      category: transaction.category,
+      date: transaction.date
+    });
+    setError("");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditForm(initialForm);
+  }
+
+  async function handleEditSave(event) {
+    event.preventDefault();
+
+    try {
+      setSavingEdit(true);
+      setError("");
+
+      const response = await fetch(`${API_BASE_URL}/transactions/${editingId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          amount: Number(editForm.amount),
+          category: editForm.category,
+          date: editForm.date
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update transaction.");
+      }
+
+      setTransactions((current) =>
+        [...current.map((transaction) => (transaction.id === editingId ? data : transaction))].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      );
+      cancelEdit();
+    } catch (editError) {
+      setError(editError.message);
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
   async function handleDelete(id) {
     try {
       setDeletingId(id);
@@ -97,6 +153,10 @@ function App() {
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to delete transaction.");
+      }
+
+      if (editingId === id) {
+        cancelEdit();
       }
 
       setTransactions((current) => current.filter((transaction) => transaction.id !== id));
@@ -283,26 +343,92 @@ function App() {
               <div className="empty-state">Loading transactions...</div>
             ) : transactions.length ? (
               <div className="transaction-list">
-                {transactions.map((transaction) => (
-                  <div className="transaction-row" key={transaction.id}>
-                    <div>
-                      <strong>{transaction.category}</strong>
-                      <p>{new Date(transaction.date).toLocaleDateString()}</p>
+                {transactions.map((transaction) =>
+                  editingId === transaction.id ? (
+                    <form
+                      className="transaction-edit-form"
+                      key={transaction.id}
+                      onSubmit={handleEditSave}
+                    >
+                      <label>
+                        Amount
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={editForm.amount}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, amount: event.target.value })
+                          }
+                          required
+                        />
+                      </label>
+                      <label>
+                        Category
+                        <input
+                          type="text"
+                          value={editForm.category}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, category: event.target.value })
+                          }
+                          required
+                        />
+                      </label>
+                      <label>
+                        Date
+                        <input
+                          type="date"
+                          value={editForm.date}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, date: event.target.value })
+                          }
+                          required
+                        />
+                      </label>
+                      <div className="edit-actions">
+                        <button className="save-button" type="submit" disabled={savingEdit}>
+                          {savingEdit ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          className="cancel-button"
+                          type="button"
+                          onClick={cancelEdit}
+                          disabled={savingEdit}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="transaction-row" key={transaction.id}>
+                      <div>
+                        <strong>{transaction.category}</strong>
+                        <p>{new Date(transaction.date).toLocaleDateString()}</p>
+                      </div>
+                      <div className="transaction-actions">
+                        <span>{formatCurrency(transaction.amount)}</span>
+                        <button
+                          className="edit-button"
+                          type="button"
+                          onClick={() => startEdit(transaction)}
+                          disabled={deletingId === transaction.id}
+                          aria-label={`Edit ${transaction.category} transaction`}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="delete-button"
+                          type="button"
+                          onClick={() => handleDelete(transaction.id)}
+                          disabled={deletingId === transaction.id}
+                          aria-label={`Delete ${transaction.category} transaction`}
+                        >
+                          {deletingId === transaction.id ? "..." : "Delete"}
+                        </button>
+                      </div>
                     </div>
-                    <div className="transaction-actions">
-                      <span>{formatCurrency(transaction.amount)}</span>
-                      <button
-                        className="delete-button"
-                        type="button"
-                        onClick={() => handleDelete(transaction.id)}
-                        disabled={deletingId === transaction.id}
-                        aria-label={`Delete ${transaction.category} transaction`}
-                      >
-                        {deletingId === transaction.id ? "..." : "Delete"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             ) : (
               <div className="empty-state">No transactions yet. Add your first expense.</div>
