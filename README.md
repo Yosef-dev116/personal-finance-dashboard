@@ -1,38 +1,67 @@
-# 💰 Personal Finance Dashboard (Full-Stack Expense Tracker)
+# 💰 Personal Finance Dashboard
 
-A modern full-stack personal finance dashboard built with **React**, **Express**, and **Node.js**. Users can add, edit, delete, and visualize expenses while receiving AI-powered financial insights through an intuitive dashboard.
+A modern **full-stack personal finance management application** built with **React**, **Express.js**, **Node.js**, and **OpenAI**. The application helps users track income and expenses, analyze spending patterns, and visualize financial data through an interactive dashboard.
 
-Built to demonstrate full-stack web development skills including REST APIs, CRUD operations, data persistence, responsive UI design, data visualization, and AI integration.
+Built to demonstrate full-stack web development skills including REST APIs, CRUD operations, responsive UI design, analytics dashboards, data visualization, and AI integration.
 
 ---
 
 # 🌐 Live Demo
 
-🚧 Coming Soon...
+**Frontend (Vercel)**
+
+https://personal-finance-dashboard-eosin-alpha.vercel.app
+
+**Backend API (Render)**
+
+https://personal-finance-dashboard-lrap.onrender.com
 
 ---
 
 # 📸 Screenshots
 
-> Dashboard screenshots will be added as the project evolves.
+> Dashboard screenshots will be added as the project continues to evolve.
 
 ---
 
 # ✨ Features
 
-- ✅ Add new transactions
-- ✅ Edit existing transactions
+## Transaction Management
+
+- ✅ Add transactions
+- ✅ Edit transactions
 - ✅ Delete transactions
+- ✅ Search transactions
+- ✅ Sort transactions
 - ✅ Persistent transaction storage
-- ✅ Spending dashboard
-- ✅ Category pie chart visualization
-- ✅ AI-powered financial advice
-- ✅ RESTful API backend
+
+---
+
+## Financial Dashboard
+
+- ✅ Income tracking
+- ✅ Expense tracking
+- ✅ Net balance calculation
+- ✅ Financial summary insights
+- ✅ Monthly reports
+- ✅ Monthly spending trends
+- ✅ Income vs Expense comparison
+- ✅ Spending by category pie chart
+
+---
+
+## AI Features
+
+- ✅ AI-powered financial analysis
+- ✅ Personalized financial recommendations
+
+---
+
+## User Experience
+
 - ✅ Responsive modern UI
-- 🚧 Search transactions
-- 🚧 Filter by category
-- 🚧 Monthly reports
-- 🚧 Income tracking
+- ✅ Dark theme
+- ✅ Real-time dashboard updates
 
 ---
 
@@ -49,11 +78,17 @@ Built to demonstrate full-stack web development skills including REST APIs, CRUD
 
 - Node.js
 - Express.js
+- REST API
 - OpenAI API
 
-## Data Storage
+## Current Data Storage
 
 - JSON file-based persistence
+
+## Deployment
+
+- Vercel
+- Render
 
 ---
 
@@ -63,7 +98,8 @@ Built to demonstrate full-stack web development skills including REST APIs, CRUD
 client/
 ├── src/
 ├── public/
-└── package.json
+├── package.json
+└── vite.config.js
 
 server/
 ├── index.js
@@ -76,13 +112,15 @@ server/
 
 # 🚀 Getting Started
 
-## 1. Install dependencies
+## Install dependencies
 
 ```bash
 npm run install:all
 ```
 
-## 2. Configure environment variables
+---
+
+## Configure Environment Variables
 
 Copy
 
@@ -96,26 +134,30 @@ to
 server/.env
 ```
 
-Add your OpenAI API key:
+Add
 
 ```env
-OPENAI_API_KEY=your_api_key_here
+OPENAI_API_KEY=your_api_key
 PORT=4000
 ```
 
-## 3. Start the backend
+---
+
+## Start Backend
 
 ```bash
 npm run dev:server
 ```
 
-## 4. Start the frontend
+---
+
+## Start Frontend
 
 ```bash
 npm run dev:client
 ```
 
-Open your browser:
+Open
 
 ```
 http://localhost:5173
@@ -127,24 +169,42 @@ http://localhost:5173
 
 | Method | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/transactions` | Get all transactions |
-| POST | `/transactions` | Create transaction |
-| PUT | `/transactions/:id` | Update transaction |
-| DELETE | `/transactions/:id` | Delete transaction |
-| POST | `/analyze` | Generate AI financial advice |
+| GET | `/transactions` | Retrieve all transactions |
+| POST | `/transactions` | Create a transaction |
+| PUT | `/transactions/:id` | Update a transaction |
+| DELETE | `/transactions/:id` | Delete a transaction |
+| POST | `/analyze` | Generate AI financial insights |
 
 ---
 
 # 📊 Current Functionality
 
-- Track expenses
-- View total spending
-- View total transactions
-- Edit transactions
-- Delete transactions
-- Visualize spending by category
-- Store data between sessions
-- Generate AI financial recommendations
+### Dashboard
+
+- Total Income
+- Total Expenses
+- Net Balance
+- Transaction Count
+
+### Reports
+
+- Monthly Reports
+- Monthly Spending Trend
+- Income vs Expense Analysis
+- Largest Expense
+- Highest Spending Category
+
+### Transaction Management
+
+- CRUD Operations
+- Search
+- Sorting
+
+### Analytics
+
+- Financial Summary
+- Spending by Category
+- AI Financial Advice
 
 ---
 
@@ -153,25 +213,30 @@ http://localhost:5173
 ## Completed
 
 - [x] CRUD Transactions
-- [x] Dashboard statistics
-- [x] Spending visualization
-- [x] AI financial insights
-- [x] File-based data persistence
-- [x] Responsive interface
+- [x] Search Transactions
+- [x] Transaction Sorting
+- [x] Income Tracking
+- [x] Financial Dashboard
+- [x] Monthly Reports
+- [x] Financial Summary
+- [x] AI Financial Insights
+- [x] Responsive UI
+- [x] Full-stack Deployment
+- [x] GitHub Portfolio Documentation
 
-## Planned Features
+## In Progress
 
-- [ ] Search transactions
-- [ ] Filter by category
-- [ ] Sort transactions
-- [ ] Monthly spending reports
-- [ ] Income tracking
-- [ ] Budget goals
-- [ ] Export transactions (CSV/PDF)
-- [ ] User authentication
-- [ ] SQL database (PostgreSQL)
-- [ ] Cloud deployment
-- [ ] Dark/Light theme toggle
+- [ ] PostgreSQL Database Migration
+
+## Planned
+
+- [ ] User Authentication
+- [ ] Budget Goals
+- [ ] Recurring Transactions
+- [ ] Export CSV/PDF
+- [ ] Notifications
+- [ ] Cloud Database
+- [ ] Dark / Light Theme Toggle
 
 ---
 
@@ -179,15 +244,17 @@ http://localhost:5173
 
 Building this project strengthened my understanding of:
 
-- Building REST APIs with Express
-- React state management
-- CRUD application development
-- JSON file persistence
-- Data validation
-- API integration with OpenAI
-- Responsive UI design
+- React component architecture
+- State management
+- REST API development
+- Express.js backend development
+- CRUD application design
+- JSON persistence
+- AI integration with OpenAI
+- Responsive UI development
 - Data visualization using Recharts
-- Git and GitHub workflows
+- Git & GitHub workflows
+- Deploying full-stack applications with Vercel and Render
 
 ---
 
@@ -195,20 +262,23 @@ Building this project strengthened my understanding of:
 
 **Yosef Mekonnen**
 
-Computer Science Student — University of Prince Edward Island (UPEI)
+Computer Science Student  
+University of Prince Edward Island (UPEI)
 
-GitHub:
+GitHub
+
 https://github.com/Yosef-dev116
 
-LinkedIn:
+LinkedIn
+
 https://www.linkedin.com/in/yosefmekonnen
 
 ---
 
 # 📄 License
 
-This project is licensed under the MIT License.
+MIT License
 
 ---
 
-⭐ Built as a portfolio project to demonstrate modern full-stack web development skills and continuously expanded with new features.
+⭐ This project is continuously being expanded to demonstrate production-ready full-stack web development skills.
