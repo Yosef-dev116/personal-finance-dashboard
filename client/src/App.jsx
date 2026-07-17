@@ -12,11 +12,18 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
 } from "recharts";
 
-const API_BASE_URL = "http://localhost:4000";
-const COLORS = ["#0f766e", "#ea580c", "#0284c7", "#7c3aed", "#65a30d", "#dc2626"];
+const API_BASE_URL = "https://personal-finance-dashboard-lrap.onrender.com";
+const COLORS = [
+  "#0f766e",
+  "#ea580c",
+  "#0284c7",
+  "#7c3aed",
+  "#65a30d",
+  "#dc2626",
+];
 const INCOME_COLOR = "#4ade80";
 const EXPENSE_COLOR = "#f87171";
 
@@ -25,14 +32,14 @@ const SORT_OPTIONS = [
   { value: "oldest", label: "Oldest first" },
   { value: "highest", label: "Highest amount" },
   { value: "lowest", label: "Lowest amount" },
-  { value: "category", label: "Category A-Z" }
+  { value: "category", label: "Category A-Z" },
 ];
 
 const initialForm = {
   amount: "",
   category: "",
   date: new Date().toISOString().slice(0, 10),
-  type: "expense"
+  type: "expense",
 };
 
 function getTransactionType(transaction) {
@@ -45,7 +52,7 @@ function sortTransactions(list, sortBy) {
   switch (sortBy) {
     case "oldest":
       return sorted.sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
       );
     case "highest":
       return sorted.sort((a, b) => Number(b.amount) - Number(a.amount));
@@ -54,13 +61,13 @@ function sortTransactions(list, sortBy) {
     case "category":
       return sorted.sort((a, b) =>
         (a.category || "").localeCompare(b.category || "", undefined, {
-          sensitivity: "base"
-        })
+          sensitivity: "base",
+        }),
       );
     case "newest":
     default:
       return sorted.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
   }
 }
@@ -68,7 +75,7 @@ function sortTransactions(list, sortBy) {
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD"
+    currency: "USD",
   }).format(value);
 }
 
@@ -104,7 +111,7 @@ function formatMonthLabel(monthKey) {
   const [year, month] = monthKey.split("-").map(Number);
   return new Date(year, month - 1, 1).toLocaleDateString(undefined, {
     month: "long",
-    year: "numeric"
+    year: "numeric",
   });
 }
 
@@ -112,7 +119,7 @@ function formatShortMonthLabel(monthKey) {
   const [year, month] = monthKey.split("-").map(Number);
   return new Date(year, month - 1, 1).toLocaleDateString(undefined, {
     month: "short",
-    year: "2-digit"
+    year: "2-digit",
   });
 }
 
@@ -131,7 +138,7 @@ function buildMonthlyReports(transactions) {
         shortLabel: formatShortMonthLabel(key),
         transactions: [],
         income: 0,
-        expenses: 0
+        expenses: 0,
       };
     }
 
@@ -149,22 +156,27 @@ function buildMonthlyReports(transactions) {
     .map((key) => {
       const group = groups[key];
       const expensesOnly = group.transactions.filter(
-        (transaction) => getTransactionType(transaction) === "expense"
+        (transaction) => getTransactionType(transaction) === "expense",
       );
 
       const largestExpense = expensesOnly.length
         ? expensesOnly.reduce((largest, transaction) =>
-            Number(transaction.amount) > Number(largest.amount) ? transaction : largest
+            Number(transaction.amount) > Number(largest.amount)
+              ? transaction
+              : largest,
           )
         : null;
 
       const categoryTotals = {};
       for (const transaction of expensesOnly) {
         const category = transaction.category || "Other";
-        categoryTotals[category] = (categoryTotals[category] || 0) + Number(transaction.amount);
+        categoryTotals[category] =
+          (categoryTotals[category] || 0) + Number(transaction.amount);
       }
 
-      const highestCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
+      const highestCategoryEntry = Object.entries(categoryTotals).sort(
+        (a, b) => b[1] - a[1],
+      )[0];
       const net = group.income - group.expenses;
 
       return {
@@ -179,9 +191,9 @@ function buildMonthlyReports(transactions) {
         highestCategory: highestCategoryEntry
           ? {
               name: highestCategoryEntry[0],
-              amount: highestCategoryEntry[1]
+              amount: highestCategoryEntry[1],
             }
-          : null
+          : null,
       };
     });
 }
@@ -195,7 +207,7 @@ function buildFinancialSummaryInsights(transactions) {
       "You haven't recorded any income or expenses yet.",
       "There's no largest expense to highlight yet.",
       "No spending category stands out yet.",
-      "You've recorded 0 transactions."
+      "You've recorded 0 transactions.",
     ];
   }
 
@@ -245,7 +257,9 @@ function buildFinancialSummaryInsights(transactions) {
       }.`
     : "You haven't recorded any expenses yet.";
 
-  const highestCategoryEntry = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0];
+  const highestCategoryEntry = Object.entries(categoryTotals).sort(
+    (a, b) => b[1] - a[1],
+  )[0];
   const highestCategoryInsight = highestCategoryEntry
     ? `${highestCategoryEntry[0]} is your highest expense category at ${formatCurrency(highestCategoryEntry[1])}.`
     : "No spending category stands out yet.";
@@ -258,7 +272,7 @@ function buildFinancialSummaryInsights(transactions) {
     incomeVsExpenseInsight,
     largestExpenseInsight,
     highestCategoryInsight,
-    countInsight
+    countInsight,
   ];
 }
 
@@ -311,14 +325,14 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/transactions`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           amount: Number(form.amount),
           category: form.category,
           date: form.date,
-          type: form.type
-        })
+          type: form.type,
+        }),
       });
 
       const data = await response.json();
@@ -342,7 +356,7 @@ function App() {
       amount: String(transaction.amount),
       category: transaction.category,
       date: transaction.date,
-      type: getTransactionType(transaction)
+      type: getTransactionType(transaction),
     });
     setError("");
   }
@@ -359,18 +373,21 @@ function App() {
       setSavingEdit(true);
       setError("");
 
-      const response = await fetch(`${API_BASE_URL}/transactions/${editingId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
+      const response = await fetch(
+        `${API_BASE_URL}/transactions/${editingId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: Number(editForm.amount),
+            category: editForm.category,
+            date: editForm.date,
+            type: editForm.type,
+          }),
         },
-        body: JSON.stringify({
-          amount: Number(editForm.amount),
-          category: editForm.category,
-          date: editForm.date,
-          type: editForm.type
-        })
-      });
+      );
 
       const data = await response.json();
 
@@ -379,9 +396,13 @@ function App() {
       }
 
       setTransactions((current) =>
-        [...current.map((transaction) => (transaction.id === editingId ? data : transaction))].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        )
+        [
+          ...current.map((transaction) =>
+            transaction.id === editingId ? data : transaction,
+          ),
+        ].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        ),
       );
       cancelEdit();
     } catch (editError) {
@@ -397,7 +418,7 @@ function App() {
       setError("");
 
       const response = await fetch(`${API_BASE_URL}/transactions/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
       });
 
       const data = await response.json();
@@ -410,7 +431,9 @@ function App() {
         cancelEdit();
       }
 
-      setTransactions((current) => current.filter((transaction) => transaction.id !== id));
+      setTransactions((current) =>
+        current.filter((transaction) => transaction.id !== id),
+      );
     } catch (deleteError) {
       setError(deleteError.message);
     } finally {
@@ -427,14 +450,14 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/analyze`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           transactions: transactions.map((transaction) => ({
             ...transaction,
-            type: getTransactionType(transaction)
-          }))
-        })
+            type: getTransactionType(transaction),
+          })),
+        }),
       });
 
       const data = await response.json();
@@ -477,36 +500,44 @@ function App() {
 
         summary[category].value += Number(transaction.amount);
         return summary;
-      }, {})
+      }, {}),
   );
 
   const incomeVsExpenseData = [
-    { name: "Income", value: Number(totalIncome.toFixed(2)), fill: INCOME_COLOR },
-    { name: "Expenses", value: Number(totalExpenses.toFixed(2)), fill: EXPENSE_COLOR }
+    {
+      name: "Income",
+      value: Number(totalIncome.toFixed(2)),
+      fill: INCOME_COLOR,
+    },
+    {
+      name: "Expenses",
+      value: Number(totalExpenses.toFixed(2)),
+      fill: EXPENSE_COLOR,
+    },
   ];
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const filteredTransactions = normalizedSearch
     ? transactions.filter((transaction) =>
-        (transaction.category || "").toLowerCase().includes(normalizedSearch)
+        (transaction.category || "").toLowerCase().includes(normalizedSearch),
       )
     : transactions;
   const visibleTransactions = sortTransactions(filteredTransactions, sortBy);
 
   const monthlyReports = buildMonthlyReports(transactions);
-  const effectiveMonthKey = monthlyReports.some((report) => report.key === selectedMonthKey)
+  const effectiveMonthKey = monthlyReports.some(
+    (report) => report.key === selectedMonthKey,
+  )
     ? selectedMonthKey
     : monthlyReports[0]?.key || "";
   const selectedMonthReport =
     monthlyReports.find((report) => report.key === effectiveMonthKey) || null;
-  const monthlyTrendData = [...monthlyReports]
-    .reverse()
-    .map((report) => ({
-      month: report.shortLabel,
-      income: Number(report.income.toFixed(2)),
-      expenses: Number(report.expenses.toFixed(2)),
-      net: Number(report.net.toFixed(2))
-    }));
+  const monthlyTrendData = [...monthlyReports].reverse().map((report) => ({
+    month: report.shortLabel,
+    income: Number(report.income.toFixed(2)),
+    expenses: Number(report.expenses.toFixed(2)),
+    net: Number(report.net.toFixed(2)),
+  }));
 
   const financialSummaryInsights = buildFinancialSummaryInsights(transactions);
 
@@ -521,8 +552,8 @@ function App() {
             <p className="eyebrow">Personal finance dashboard</p>
             <h1>Track income and spending with practical AI guidance.</h1>
             <p className="hero-copy">
-              Add income and expenses, review your balance, and generate tailored financial advice
-              from your recent transactions.
+              Add income and expenses, review your balance, and generate
+              tailored financial advice from your recent transactions.
             </p>
           </div>
 
@@ -537,7 +568,9 @@ function App() {
         <section className="summary-cards">
           <div className="stat-card summary-card">
             <span>Total Income</span>
-            <strong className="amount-income">{formatSignedAmount(totalIncome, "income")}</strong>
+            <strong className="amount-income">
+              {formatSignedAmount(totalIncome, "income")}
+            </strong>
           </div>
           <div className="stat-card summary-card">
             <span>Total Expenses</span>
@@ -580,7 +613,9 @@ function App() {
                 Type
                 <select
                   value={form.type}
-                  onChange={(event) => setForm({ ...form, type: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, type: event.target.value })
+                  }
                   required
                 >
                   <option value="expense">Expense</option>
@@ -595,7 +630,9 @@ function App() {
                   min="0.01"
                   step="0.01"
                   value={form.amount}
-                  onChange={(event) => setForm({ ...form, amount: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, amount: event.target.value })
+                  }
                   placeholder="45.99"
                   required
                 />
@@ -606,7 +643,9 @@ function App() {
                 <input
                   type="text"
                   value={form.category}
-                  onChange={(event) => setForm({ ...form, category: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, category: event.target.value })
+                  }
                   placeholder={form.type === "income" ? "Salary" : "Groceries"}
                   required
                 />
@@ -617,12 +656,18 @@ function App() {
                 <input
                   type="date"
                   value={form.date}
-                  onChange={(event) => setForm({ ...form, date: event.target.value })}
+                  onChange={(event) =>
+                    setForm({ ...form, date: event.target.value })
+                  }
                   required
                 />
               </label>
 
-              <button className="primary-button" type="submit" disabled={submitting}>
+              <button
+                className="primary-button"
+                type="submit"
+                disabled={submitting}
+              >
                 {submitting ? "Saving..." : "Add transaction"}
               </button>
             </form>
@@ -647,14 +692,19 @@ function App() {
                       paddingAngle={4}
                     >
                       {expenseChartData.map((entry, index) => (
-                        <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
+                        <Cell
+                          key={entry.name}
+                          fill={COLORS[index % COLORS.length]}
+                        />
                       ))}
                     </Pie>
                     <Tooltip formatter={(value) => formatCurrency(value)} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="empty-state">Add expenses to see your spending chart.</div>
+                <div className="empty-state">
+                  Add expenses to see your spending chart.
+                </div>
               )}
             </div>
 
@@ -682,8 +732,14 @@ function App() {
           <div className="chart-wrapper bar-chart-wrapper">
             {totalIncome > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={incomeVsExpenseData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid stroke="rgba(148, 163, 184, 0.18)" vertical={false} />
+                <BarChart
+                  data={incomeVsExpenseData}
+                  margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    stroke="rgba(148, 163, 184, 0.18)"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="name"
                     tick={{ fill: "#94a3b8", fontSize: 12 }}
@@ -703,7 +759,7 @@ function App() {
                       background: "rgba(15, 23, 42, 0.95)",
                       border: "1px solid rgba(148, 163, 184, 0.25)",
                       borderRadius: "12px",
-                      color: "#f8fafc"
+                      color: "#f8fafc",
                     }}
                   />
                   <Bar dataKey="value" radius={[12, 12, 4, 4]}>
@@ -759,12 +815,17 @@ function App() {
                   <div className="stat-card">
                     <span>Monthly Expenses</span>
                     <strong className="amount-expense">
-                      {formatSignedAmount(selectedMonthReport.expenses, "expense")}
+                      {formatSignedAmount(
+                        selectedMonthReport.expenses,
+                        "expense",
+                      )}
                     </strong>
                   </div>
                   <div className="stat-card">
                     <span>Monthly Net Balance</span>
-                    <strong className={getNetBalanceClass(selectedMonthReport.net)}>
+                    <strong
+                      className={getNetBalanceClass(selectedMonthReport.net)}
+                    >
                       {formatNetBalance(selectedMonthReport.net)}
                     </strong>
                   </div>
@@ -778,21 +839,26 @@ function App() {
                       {selectedMonthReport.largestExpense
                         ? formatSignedAmount(
                             selectedMonthReport.largestExpense.amount,
-                            "expense"
+                            "expense",
                           )
                         : "—"}
                     </strong>
-                    <p>{selectedMonthReport.largestExpense?.category || "No expenses"}</p>
+                    <p>
+                      {selectedMonthReport.largestExpense?.category ||
+                        "No expenses"}
+                    </p>
                   </div>
                   <div className="stat-card">
                     <span>Highest category</span>
-                    <strong>{selectedMonthReport.highestCategory?.name || "—"}</strong>
+                    <strong>
+                      {selectedMonthReport.highestCategory?.name || "—"}
+                    </strong>
                     <p>
                       {selectedMonthReport.highestCategory ? (
                         <span className="amount-expense">
                           {formatSignedAmount(
                             selectedMonthReport.highestCategory.amount,
-                            "expense"
+                            "expense",
                           )}
                         </span>
                       ) : (
@@ -806,23 +872,59 @@ function App() {
               <div className="monthly-trend">
                 <div className="panel-header">
                   <h3>Monthly income & expense trend</h3>
-                  <p>Compare money in and out across months with transactions.</p>
+                  <p>
+                    Compare money in and out across months with transactions.
+                  </p>
                 </div>
 
                 <div className="chart-wrapper trend-chart-wrapper">
                   <ResponsiveContainer width="100%" height={260}>
-                    <AreaChart data={monthlyTrendData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <AreaChart
+                      data={monthlyTrendData}
+                      margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                    >
                       <defs>
-                        <linearGradient id="monthlyIncomeGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#4ade80" stopOpacity={0.45} />
-                          <stop offset="95%" stopColor="#4ade80" stopOpacity={0.05} />
+                        <linearGradient
+                          id="monthlyIncomeGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#4ade80"
+                            stopOpacity={0.45}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#4ade80"
+                            stopOpacity={0.05}
+                          />
                         </linearGradient>
-                        <linearGradient id="monthlyExpenseGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f87171" stopOpacity={0.45} />
-                          <stop offset="95%" stopColor="#f87171" stopOpacity={0.05} />
+                        <linearGradient
+                          id="monthlyExpenseGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#f87171"
+                            stopOpacity={0.45}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#f87171"
+                            stopOpacity={0.05}
+                          />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid stroke="rgba(148, 163, 184, 0.18)" vertical={false} />
+                      <CartesianGrid
+                        stroke="rgba(148, 163, 184, 0.18)"
+                        vertical={false}
+                      />
                       <XAxis
                         dataKey="month"
                         tick={{ fill: "#94a3b8", fontSize: 12 }}
@@ -839,13 +941,17 @@ function App() {
                       <Tooltip
                         formatter={(value, name) => [
                           formatCurrency(value),
-                          name === "income" ? "Income" : name === "expenses" ? "Expenses" : "Net"
+                          name === "income"
+                            ? "Income"
+                            : name === "expenses"
+                              ? "Expenses"
+                              : "Net",
                         ]}
                         contentStyle={{
                           background: "rgba(15, 23, 42, 0.95)",
                           border: "1px solid rgba(148, 163, 184, 0.25)",
                           borderRadius: "12px",
-                          color: "#f8fafc"
+                          color: "#f8fafc",
                         }}
                       />
                       <Legend />
@@ -914,7 +1020,9 @@ function App() {
             {loading ? (
               <div className="empty-state">Loading transactions...</div>
             ) : !transactions.length ? (
-              <div className="empty-state">No transactions yet. Add your first transaction.</div>
+              <div className="empty-state">
+                No transactions yet. Add your first transaction.
+              </div>
             ) : visibleTransactions.length ? (
               <div className="transaction-list">
                 {visibleTransactions.map((transaction) =>
@@ -929,7 +1037,10 @@ function App() {
                         <select
                           value={editForm.type}
                           onChange={(event) =>
-                            setEditForm({ ...editForm, type: event.target.value })
+                            setEditForm({
+                              ...editForm,
+                              type: event.target.value,
+                            })
                           }
                           required
                         >
@@ -945,7 +1056,10 @@ function App() {
                           step="0.01"
                           value={editForm.amount}
                           onChange={(event) =>
-                            setEditForm({ ...editForm, amount: event.target.value })
+                            setEditForm({
+                              ...editForm,
+                              amount: event.target.value,
+                            })
                           }
                           required
                         />
@@ -956,7 +1070,10 @@ function App() {
                           type="text"
                           value={editForm.category}
                           onChange={(event) =>
-                            setEditForm({ ...editForm, category: event.target.value })
+                            setEditForm({
+                              ...editForm,
+                              category: event.target.value,
+                            })
                           }
                           required
                         />
@@ -967,13 +1084,20 @@ function App() {
                           type="date"
                           value={editForm.date}
                           onChange={(event) =>
-                            setEditForm({ ...editForm, date: event.target.value })
+                            setEditForm({
+                              ...editForm,
+                              date: event.target.value,
+                            })
                           }
                           required
                         />
                       </label>
                       <div className="edit-actions">
-                        <button className="save-button" type="submit" disabled={savingEdit}>
+                        <button
+                          className="save-button"
+                          type="submit"
+                          disabled={savingEdit}
+                        >
                           {savingEdit ? "Saving..." : "Save"}
                         </button>
                         <button
@@ -992,7 +1116,9 @@ function App() {
                         <strong>{transaction.category}</strong>
                         <p>
                           {new Date(transaction.date).toLocaleDateString()}
-                          <span className={`type-badge type-badge-${getTransactionType(transaction)}`}>
+                          <span
+                            className={`type-badge type-badge-${getTransactionType(transaction)}`}
+                          >
                             {getTransactionType(transaction)}
                           </span>
                         </p>
@@ -1007,7 +1133,7 @@ function App() {
                         >
                           {formatSignedAmount(
                             transaction.amount,
-                            getTransactionType(transaction)
+                            getTransactionType(transaction),
                           )}
                         </span>
                         <button
@@ -1030,12 +1156,13 @@ function App() {
                         </button>
                       </div>
                     </div>
-                  )
+                  ),
                 )}
               </div>
             ) : (
               <div className="empty-state">
-                No transactions match &ldquo;{searchQuery.trim()}&rdquo;. Try another category.
+                No transactions match &ldquo;{searchQuery.trim()}&rdquo;. Try
+                another category.
               </div>
             )}
           </article>
@@ -1056,7 +1183,8 @@ function App() {
             </button>
 
             <div className="advice-box">
-              {advice || "Your personalized advice will appear here after analysis."}
+              {advice ||
+                "Your personalized advice will appear here after analysis."}
             </div>
           </article>
         </section>
