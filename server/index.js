@@ -6,6 +6,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import OpenAI from "openai";
+import { pool } from "./db.js";
 
 dotenv.config();
 
@@ -20,7 +21,7 @@ const DEFAULT_TRANSACTIONS = [
     category: "Groceries",
     date: "2026-04-02",
     type: "expense",
-    createdAt: "2026-04-02T12:00:00.000Z"
+    createdAt: "2026-04-02T12:00:00.000Z",
   },
   {
     id: "seed-2",
@@ -28,7 +29,7 @@ const DEFAULT_TRANSACTIONS = [
     category: "Transport",
     date: "2026-04-03",
     type: "expense",
-    createdAt: "2026-04-03T12:00:00.000Z"
+    createdAt: "2026-04-03T12:00:00.000Z",
   },
   {
     id: "seed-3",
@@ -36,14 +37,14 @@ const DEFAULT_TRANSACTIONS = [
     category: "Dining",
     date: "2026-04-05",
     type: "expense",
-    createdAt: "2026-04-05T12:00:00.000Z"
-  }
+    createdAt: "2026-04-05T12:00:00.000Z",
+  },
 ];
 
 function normalizeTransaction(transaction) {
   return {
     ...transaction,
-    type: ALLOWED_TYPES.has(transaction.type) ? transaction.type : "expense"
+    type: ALLOWED_TYPES.has(transaction.type) ? transaction.type : "expense",
   };
 }
 
@@ -77,7 +78,11 @@ function loadTransactionsFromFile() {
 }
 
 function saveTransactionsToFile() {
-  fs.writeFileSync(TRANSACTIONS_PATH, JSON.stringify(transactions, null, 2), "utf8");
+  fs.writeFileSync(
+    TRANSACTIONS_PATH,
+    JSON.stringify(transactions, null, 2),
+    "utf8",
+  );
 }
 
 const app = express();
@@ -93,15 +98,28 @@ const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
-app.get("/transactions", (_req, res) => {
-  const sortedTransactions = [...transactions].sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
+app.get("/transactions", async (_req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        id,
+        amount,
+        category,
+        date,
+        type,
+        created_at AS "createdAt"
+      FROM transactions
+      ORDER BY date DESC;
+    `);
 
-  res.json(sortedTransactions);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch transactions." });
+  }
 });
 
-app.post("/transactions", (req, res) => {
+app.post("/transactions", async (req, res) => {
   const { amount, category, date, type } = req.body;
   const transactionType = parseTransactionType(type);
 
@@ -118,7 +136,9 @@ app.post("/transactions", (req, res) => {
   }
 
   if (!transactionType) {
-    return res.status(400).json({ error: 'Type must be either "income" or "expense".' });
+    return res
+      .status(400)
+      .json({ error: 'Type must be either "income" or "expense".' });
   }
 
   const transaction = {
@@ -127,21 +147,40 @@ app.post("/transactions", (req, res) => {
     category: category.trim(),
     date,
     type: transactionType,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
 
-  transactions = [transaction, ...transactions];
-  saveTransactionsToFile();
-  res.status(201).json(transaction);
+  try {
+    await pool.query(
+      `
+      INSERT INTO transactions (
+        id,
+        amount,
+        category,
+        date,
+        type,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6);
+    `,
+      [
+        transaction.id,
+        transaction.amount,
+        transaction.category,
+        transaction.date,
+        transaction.type,
+        transaction.createdAt,
+      ],
+    );
+
+    res.status(201).json(transaction);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to save transaction." });
+  }
 });
 
-app.put("/transactions/:id", (req, res) => {
-  const index = transactions.findIndex((transaction) => transaction.id === req.params.id);
-
-  if (index === -1) {
-    return res.status(404).json({ error: "Transaction not found." });
-  }
-
+app.put("/transactions/:id", async (req, res) => {
   const { amount, category, date, type } = req.body;
   const transactionType = parseTransactionType(type);
 
@@ -158,48 +197,77 @@ app.put("/transactions/:id", (req, res) => {
   }
 
   if (!transactionType) {
-    return res.status(400).json({ error: 'Type must be either "income" or "expense".' });
+    return res
+      .status(400)
+      .json({ error: 'Type must be either "income" or "expense".' });
   }
 
-  const updatedTransaction = {
-    ...transactions[index],
-    amount: Number(amount),
-    category: category.trim(),
-    date,
-    type: transactionType
-  };
+  try {
+    const result = await pool.query(
+      `
+      UPDATE transactions
+      SET
+        amount = $1,
+        category = $2,
+        date = $3,
+        type = $4
+      WHERE id = $5
+      RETURNING
+        id,
+        amount,
+        category,
+        date,
+        type,
+        created_at AS "createdAt";
+    `,
+      [Number(amount), category.trim(), date, transactionType, req.params.id],
+    );
 
-  transactions = [
-    ...transactions.slice(0, index),
-    updatedTransaction,
-    ...transactions.slice(index + 1)
-  ];
-  saveTransactionsToFile();
-  res.json(updatedTransaction);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Transaction not found." });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to update transaction." });
+  }
 });
 
-app.delete("/transactions/:id", (req, res) => {
-  const index = transactions.findIndex((transaction) => transaction.id === req.params.id);
+app.delete("/transactions/:id", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "DELETE FROM transactions WHERE id = $1 RETURNING id;",
+      [req.params.id],
+    );
 
-  if (index === -1) {
-    return res.status(404).json({ error: "Transaction not found." });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Transaction not found." });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to delete transaction." });
   }
-
-  transactions = transactions.filter((transaction) => transaction.id !== req.params.id);
-  saveTransactionsToFile();
-  res.json({ success: true });
 });
 
 app.post("/analyze", async (req, res) => {
   const submittedTransactions = req.body.transactions;
 
-  if (!Array.isArray(submittedTransactions) || submittedTransactions.length === 0) {
-    return res.status(400).json({ error: "Provide at least one transaction to analyze." });
+  if (
+    !Array.isArray(submittedTransactions) ||
+    submittedTransactions.length === 0
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Provide at least one transaction to analyze." });
   }
 
   if (!openai) {
     return res.status(500).json({
-      error: "OPENAI_API_KEY is missing. Add it to server/.env to enable analysis."
+      error:
+        "OPENAI_API_KEY is missing. Add it to server/.env to enable analysis.",
     });
   }
 
@@ -207,11 +275,15 @@ app.post("/analyze", async (req, res) => {
     const normalized = submittedTransactions.map(normalizeTransaction);
 
     const totalIncome = normalized.reduce((sum, transaction) => {
-      return transaction.type === "income" ? sum + Number(transaction.amount || 0) : sum;
+      return transaction.type === "income"
+        ? sum + Number(transaction.amount || 0)
+        : sum;
     }, 0);
 
     const totalExpenses = normalized.reduce((sum, transaction) => {
-      return transaction.type === "expense" ? sum + Number(transaction.amount || 0) : sum;
+      return transaction.type === "expense"
+        ? sum + Number(transaction.amount || 0)
+        : sum;
     }, 0);
 
     const netBalance = totalIncome - totalExpenses;
@@ -244,16 +316,16 @@ app.post("/analyze", async (req, res) => {
       `Net balance: ${netBalance.toFixed(2)}`,
       `Income category summary: ${JSON.stringify(incomeCategorySummary)}`,
       `Expense category summary: ${JSON.stringify(expenseCategorySummary)}`,
-      `Transactions (include type): ${JSON.stringify(normalized)}`
+      `Transactions (include type): ${JSON.stringify(normalized)}`,
     ].join("\n");
 
     const response = await openai.responses.create({
       model: "gpt-4.1-mini",
-      input: prompt
+      input: prompt,
     });
 
     res.json({
-      advice: response.output_text || "No advice was generated."
+      advice: response.output_text || "No advice was generated.",
     });
   } catch (error) {
     console.error("OpenAI analysis failed:", error);
