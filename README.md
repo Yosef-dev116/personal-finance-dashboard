@@ -28,13 +28,13 @@ https://personal-finance-dashboard-lrap.onrender.com
 
 <img width="944" height="410" alt="Screenshot 2026-07-18 162059" src="https://github.com/user-attachments/assets/efa4aec3-fbcc-42b3-83b8-572aea98a2b8" />
 
-<img width="944" height="410" alt="Screenshot 2026-07-18 162059" src="https://github.com/user-attachments/assets/6cdf09df-e86e-4fd0-acfb-ad38576aa024" />
-
 <img width="942" height="415" alt="Screenshot 2026-07-18 162120" src="https://github.com/user-attachments/assets/8a272766-b368-4044-8fe1-59b8b2dd7ed6" />
 
 <img width="938" height="390" alt="Screenshot 2026-07-18 162229" src="https://github.com/user-attachments/assets/8ff21add-a61d-4791-a8f5-a357561ce6a2" />
 
 <img width="592" height="397" alt="Screenshot 2026-07-18 162259" src="https://github.com/user-attachments/assets/7eba9ee1-c7f6-4a25-b4fb-028f4275fcb5" />
+
+<img width="865" height="409" alt="Screenshot 2026-07-18 162529" src="https://github.com/user-attachments/assets/d3b050bf-ea44-41de-be4d-bca34d0fdca6" />
 
 # ✨ Features
 
